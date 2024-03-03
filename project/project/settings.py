@@ -170,3 +170,5 @@ DEFAULT_FROM_EMAIL = "olgalo-a@yandex.ru" #будет использоватьс
 
 APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"#формат,в кот будет передаваться при рассылке
 APSCHEDULER_RUN_NOW_TIMEOUT = 25 #кол-во секунд, за кот функция д вып-ся
+
+SITE_URL ='http://127.0.0.1:8000'

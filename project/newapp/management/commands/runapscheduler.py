@@ -11,30 +11,32 @@ from django_apscheduler import util
 from django_apscheduler.jobstores import DjangoJobStore
 from django_apscheduler.models import DjangoJobExecution
 
-from project.newapp.models import Post, Subscription
+from django.utils import timezone
+
+from newapp.models import Post, Subscription
 
 logger = logging.getLogger(__name__)
 
 
 def my_job():# Your job processing logic here...
-    today = datetime.datetime.now() #определяем текущее время
+    today = timezone.now() #определяем текущее время (в таблице время с часовым поясом. ошибка "наивное время")
     last_week = today - datetime.timedelta(days=7)#первоначальная точка отсчета для рассылки появившихся новостей
-    posts = Post.objects.filter(datetime__gte=last_week)#фильтруем созданные новости за период позднее (>=) чем 7 дней назад
+    posts = Post.objects.filter(dateCreation__gte=last_week)#фильтруем созданные новости за период позднее (>=) чем 7 дней назад. dateCreation из Post
 
-    # все категории статей в виде списка (а не кортежа тк flat=True)
-    categories = set(posts.value_list('postCategory__name', flat=True))#set множество для уникальности значений
+    # все категории статей в виде списка (а не словаря тк flat=True)(по названию категории, а не по id)
+    categories = set(posts.values_list('postCategory__name', flat=True))#set множество для уникальности значений
 
-    # все подписчики категорий статей в виде списка email (а не кортежа тк flat=True)
-    subscribers = set(Subscription.objects.filter(category__in=categories).value_list('user__email', flat=True))
+    # все подписчики категорий (имя категорий совпадает с categories)  статей в виде списка email (а не словаря тк flat=True)(по названию категории, а не по id СМ ВЫШЕ)
+    subscribers = set(Subscription.objects.filter(category__name__in=categories).values_list('user__email', flat=True))
 
     html_content = render_to_string('daily_post.html',
                                     {'link': settings.SITE_URL,
-                                     'posts': posts})
+                                     'posts': posts})#в цикле б проходиться и добавлять в шаблон
     msg = EmailMultiAlternatives(
-        subject = "Статьи за неделю",
-        body = '',
-        from_email = settings.DEFAULT_FROM_EMAIL,
-        to = subscribers)
+        subject="Статьи за неделю",
+        body='',#пустой тк шаблон есть
+        from_email=settings.DEFAULT_FROM_EMAIL,#из settings
+        to=subscribers)
 
     msg.attach_alternative(html_content, 'text/html')
     msg.send()
@@ -66,7 +68,7 @@ class Command(BaseCommand):
 
         scheduler.add_job(
             my_job,
-            trigger=CronTrigger(second="*/10"),  # Every 10 seconds
+            trigger=CronTrigger(day_of_week="fri", hour="18", minute="00"),  # команда запускается
             id="my_job",  # The `id` assigned to each job MUST be unique
             max_instances=1,
             replace_existing=True,
@@ -76,7 +78,7 @@ class Command(BaseCommand):
         scheduler.add_job(
             delete_old_job_executions,
             trigger=CronTrigger(
-                day_of_week="fri", hour="18", minute="00"
+                day_of_week="fri", hour="17", minute="00"
             ),
             id="delete_old_job_executions",
             max_instances=1,

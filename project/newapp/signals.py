@@ -19,16 +19,16 @@ def post_created(instance, **kwargs):
         #all() - тк ссылка на список связанных объектор модели PostCategory
     ).values_list('email', flat=True)
 
-    subject = f'Another news has appeared which is concerned with {instance.postCategory.all()} category'
+    subject = f'Another news has appeared which is concerned with {",".join(category.name for category in instance.postCategory.all())} category' #list comprehension («генератора списка»)
 
     text_content = (
         f'Title: {instance.title}\n'
-        f'Text: {instance.preview}\n\n'
+        f'Text: {instance.preview()}\n\n'
         f'Url: http://127.0.0.1:8000{instance.get_absolute_url()}'
     )
     html_content = (
         f'Title: {instance.title}<br>'
-        f'Text: {instance.preview}<br><br>'
+        f'Text: {instance.preview()}<br><br>'
         f'<a href="http://127.0.0.1{instance.get_absolute_url()}">'
         f'Url</a>'
     )
